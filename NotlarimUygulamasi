@@ -1,0 +1,157 @@
+package com.example.notlaruygulamasi;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+import java.util.ArrayList;
+
+public class DBHelper extends SQLiteOpenHelper {
+
+    private static final String DATABASE_NAME = "notlar.db";
+    private static final int DATABASE_VERSION = 1;
+    private static final String TABLE_NAME = "notlar";
+    private static final String COLUMN_ID = "id";
+    private static final String COLUMN_NOTE = "note";
+
+    public DBHelper(Context context) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        String CREATE_TABLE = "CREATE TABLE " + TABLE_NAME + "("
+                + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+                + COLUMN_NOTE + " TEXT)";
+        db.execSQL(CREATE_TABLE);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
+        onCreate(db);
+    }
+
+    // Yeni not ekleme
+    public void addNote(String note) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(COLUMN_NOTE, note);
+        db.insert(TABLE_NAME, null, values);
+        db.close();
+    }
+
+    // Tüm notları alma
+    public ArrayList<String> getAllNotes() {
+        ArrayList<String> notesList = new ArrayList<>();
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_NAME, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                notesList.add(cursor.getString(cursor.getColumnIndex(COLUMN_NOTE)));
+            } while (cursor.moveToNext());
+        }
+        cursor.close();
+        db.close();
+        return notesList;
+    }
+
+    // Not silme
+    public void deleteNote(int id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_NAME, COLUMN_ID + " = ?", new String[]{String.valueOf(id)});
+        db.close();
+    }
+}
+package com.example.notlaruygulamasi;
+
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.ArrayAdapter;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.ArrayList;
+
+public class MainActivity extends AppCompatActivity {
+
+    private DBHelper dbHelper;
+    private EditText noteInput;
+    private Button addButton;
+    private ListView notesListView;
+    private ArrayAdapter<String> adapter;
+    private ArrayList<String> notesList;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        dbHelper = new DBHelper(this);
+        noteInput = findViewById(R.id.noteInput);
+        addButton = findViewById(R.id.addButton);
+        notesListView = findViewById(R.id.notesListView);
+
+        notesList = new ArrayList<>();
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, notesList);
+        notesListView.setAdapter(adapter);
+
+        // Not ekleme
+        addButton.setOnClickListener(v -> {
+            String note = noteInput.getText().toString();
+            if (!note.isEmpty()) {
+                dbHelper.addNote(note);
+                noteInput.setText("");
+                showNotes();
+                Toast.makeText(MainActivity.this, "Not Eklendi!", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(MainActivity.this, "Lütfen bir not girin!", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // Notları gösterme
+        showNotes();
+    }
+
+    // Notları listeleme
+    private void showNotes() {
+        notesList.clear();
+        notesList.addAll(dbHelper.getAllNotes());
+        adapter.notifyDataSetChanged();
+    }
+}
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/noteInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Notunuzu girin"
+        android:inputType="text"/>
+
+    <Button
+        android:id="@+id/addButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Not Ekle"
+        android:layout_marginTop="8dp"/>
+
+    <ListView
+        android:id="@+id/notesListView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"/>
+</LinearLayout>
