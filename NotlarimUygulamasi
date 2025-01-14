@@ -80,6 +80,8 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
+import android.widget.AdapterView;
+
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -123,7 +125,14 @@ public class MainActivity extends AppCompatActivity {
 
         // Notları gösterme
         showNotes();
-    }
+
+     // Not silme
+        notesListView.setOnItemClickListener((parent, view, position, id) -> {
+            String selectedNote = notesList.get(position);
+            dbHelper.deleteNote(position + 1);  // assuming the index is 1-based
+            showNotes();
+            Toast.makeText(MainActivity.this, "Not Silindi!", Toast.LENGTH_SHORT).show();
+        });
 
     // Notları listeleme
     private void showNotes() {
